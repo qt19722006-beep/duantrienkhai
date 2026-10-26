@@ -1,0 +1,24 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and sensitive data
+.env.local
+.env.*.local
+
+# Application and service logs
+logs/
+*.log
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Docker volumes and temp data
+data/
+*.pid
+*.seed
+*.zip
+~$*

@@ -1,0 +1,53 @@
+# ==========================================================
+# ĐỀ SỐ 6: HỆ THỐNG ĐẶT PHÒNG KHÁCH SẠN
+# PROMETHEUS CONFIGURATION (SCRAPE TARGETS & INTERVALS)
+# ==========================================================
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+  scrape_timeout: 5s
+
+scrape_configs:
+  # 1. Tự giám sát Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Giám sát Ứng dụng Web Hotel Booking (Node.js metrics)
+  - job_name: 'hotel-app'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['app:3000']
+        labels:
+          application: 'hotel-booking'
+          env: 'production'
+
+  # 3. Giám sát Cơ sở dữ liệu PostgreSQL (Postgres Exporter)
+  - job_name: 'hotel-postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          database: 'hotel_db'
+          role: 'primary'
+
+  # 4. Giám sát Web Server Nginx (Nginx Prometheus Exporter)
+  - job_name: 'hotel-nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+        labels:
+          server: 'nginx-reverse-proxy'
+
+  # 5. Giám sát toàn bộ Container (cAdvisor)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          tier: 'infrastructure'
+
+  # 6. Giám sát tài nguyên máy chủ Host (Node Exporter)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          tier: 'system-host'

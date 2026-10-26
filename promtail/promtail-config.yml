@@ -1,0 +1,54 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # 1. Scrape Nginx Logs (Access & Error Logs)
+  - job_name: nginx
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          service: nginx-reverse-proxy
+          __path__: /var/log/nginx/hotel_*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            client_ip: client_ip
+            status: status
+            request_method: request_method
+            request_uri: request_uri
+            request_time: request_time
+      - labels:
+          status:
+          request_method:
+
+  # 2. Scrape Hotel Application Logs (Node.js JSON Logs)
+  - job_name: hotel-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: hotel-app
+          service: hotel-booking-app
+          __path__: /app/logs/*.log
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            message: message
+            event: event
+            booking_code: booking_code
+            status: status
+      - labels:
+          level:
+          event:

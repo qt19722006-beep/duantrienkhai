@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Hotel PostgreSQL Database",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "hotel_db",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "PassFile": "/pgadmin4/.pgpass"
+    }
+  }
+}

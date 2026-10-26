@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khách Sạn Hoàng Gia | Grand Palace Luxury Hotel & Suites</title>
+  <meta name="description" content="Hệ thống đặt phòng khách sạn chuẩn 5 sao quốc tế - Đề số 6: Triển khai và Quản trị Hệ thống Phần mềm">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header / Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <span class="brand-icon">🏨</span>
+        <div class="brand-text">
+          <span class="brand-title">GRAND PALACE</span>
+          <span class="brand-sub">LUXURY HOTEL & SUITES</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-link active" onclick="switchTab('rooms')">Danh Sách Phòng</button>
+        <button class="nav-link" onclick="switchTab('bookings')">Quản Lý Đặt Chỗ</button>
+        <button class="nav-link" onclick="switchTab('customers')">Khách Hàng</button>
+        <button class="nav-link" onclick="switchTab('system')">Hệ Thống & Giám Sát</button>
+      </nav>
+
+      <div class="nav-actions">
+        <div class="health-badge" id="system-health-pill">
+          <span class="pulse-dot"></span>
+          <span id="health-text">Đang kiểm tra...</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-content">
+    
+    <!-- Hero Banner -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <span class="hero-tag">🌟 TRẢI NGHIỆM ĐẲNG CẤP 5 SAO QUỐC TẾ</span>
+        <h1 class="hero-heading">Nghỉ Dưỡng Thượng Lưu Giữa Lòng Kỳ Quan</h1>
+        <p class="hero-desc">Tận hưởng không gian sang trọng, dịch vụ quản gia cao cấp cùng tầm nhìn biển và thành phố tuyệt mỹ. Ưu đãi mùa hè lên tới 25%.</p>
+        
+        <!-- Live Quick Stats -->
+        <div class="stats-row" id="quick-stats-row">
+          <div class="stat-card">
+            <span class="stat-num" id="stat-total-rooms">--</span>
+            <span class="stat-lbl">Tổng số phòng</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num text-success" id="stat-avail-rooms">--</span>
+            <span class="stat-lbl">Phòng sẵn sàng</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num" id="stat-total-bookings">--</span>
+            <span class="stat-lbl">Lượt đặt phòng</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num text-gold" id="stat-total-revenue">--</span>
+            <span class="stat-lbl">Doanh thu ghi nhận</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Search & Filter Bar -->
+    <section class="search-bar-container">
+      <div class="search-bar">
+        <div class="search-col">
+          <label>📅 Nhận phòng</label>
+          <input type="date" id="filter-checkin">
+        </div>
+        <div class="search-col">
+          <label>📅 Trả phòng</label>
+          <input type="date" id="filter-checkout">
+        </div>
+        <div class="search-col">
+          <label>👥 Số khách</label>
+          <select id="filter-guests">
+            <option value="">Tất cả</option>
+            <option value="1">1 Khách</option>
+            <option value="2">2 Khách</option>
+            <option value="3">3 Khách</option>
+            <option value="4">4+ Khách</option>
+          </select>
+        </div>
+        <div class="search-col">
+          <label>🏷️ Hạng phòng</label>
+          <select id="filter-type">
+            <option value="all">Tất cả hạng phòng</option>
+            <option value="Standard">Standard</option>
+            <option value="Superior">Superior</option>
+            <option value="Deluxe">Deluxe Ocean</option>
+            <option value="Suite">Executive Suite</option>
+            <option value="Family">Grand Family</option>
+            <option value="Presidential">Presidential Penthouse</option>
+            <option value="Bungalow">Honeymoon Bungalow</option>
+          </select>
+        </div>
+        <div class="search-col btn-col">
+          <button class="btn btn-primary" onclick="applyFilters()">
+            <span>🔍 Tìm Phòng Trống</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: DANH SÁCH PHÒNG -->
+    <section id="tab-rooms" class="tab-pane active">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Danh Sách Phòng & Biệt Thự Nghỉ Dưỡng</h2>
+          <p class="section-sub">Được trang bị tiện nghi đỉnh cao, phục vụ tiêu chuẩn quốc tế</p>
+        </div>
+        <div class="filter-pills" id="room-status-filter">
+          <button class="pill-btn active" onclick="filterByStatus('all', this)">Tất cả</button>
+          <button class="pill-btn" onclick="filterByStatus('available', this)">Phòng Trống</button>
+          <button class="pill-btn" onclick="filterByStatus('occupied', this)">Đang Ở</button>
+          <button class="pill-btn" onclick="filterByStatus('maintenance', this)">Bảo Trì</button>
+        </div>
+      </div>
+
+      <div class="rooms-grid" id="rooms-grid">
+        <!-- Rendered by JS -->
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Đang tải danh sách phòng từ PostgreSQL...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: QUẢN LÝ ĐẶT CHỖ (BOOKINGS) -->
+    <section id="tab-bookings" class="tab-pane">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Quản Lý Đơn Đặt Chỗ (Bookings)</h2>
+          <p class="section-sub">Theo dõi các đơn đặt phòng, trạng thái check-in/check-out và thanh toán</p>
+        </div>
+        <div class="search-box">
+          <input type="text" id="booking-search-input" placeholder="🔍 Tìm mã booking, SĐT, tên khách..." onkeyup="debounceBookingSearch()">
+          <select id="booking-status-select" onchange="loadBookings()">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="pending">Chờ xác nhận</option>
+            <option value="confirmed">Đã xác nhận</option>
+            <option value="checked_in">Đã Check-in</option>
+            <option value="completed">Đã hoàn tất</option>
+            <option value="cancelled">Đã hủy</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mã Đặt Chỗ</th>
+              <th>Khách Hàng</th>
+              <th>Số Phòng / Hạng</th>
+              <th>Ngày Đến / Đi</th>
+              <th>Số Đêm</th>
+              <th>Tổng Tiền (VNĐ)</th>
+              <th>Trạng Thái</th>
+              <th>Hành Động</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-table-body">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 3: KHÁCH HÀNG (CUSTOMERS) -->
+    <section id="tab-customers" class="tab-pane">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Hồ Sơ Khách Hàng Thân Thiết</h2>
+          <p class="section-sub">Dữ liệu khách hàng được bảo mật và lưu trữ trên PostgreSQL</p>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mã KH</th>
+              <th>Họ Và Tên</th>
+              <th>Email</th>
+              <th>Số Điện Thoại</th>
+              <th>Số CCCD / Hộ Chiếu</th>
+              <th>Địa Chỉ</th>
+              <th>Lượt Đặt</th>
+              <th>Chi Tiêu (VNĐ)</th>
+            </tr>
+          </thead>
+          <tbody id="customers-table-body">
+            <!-- Rendered by JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: HỆ THỐNG & GIÁM SÁT (SYSTEM & MONITORING) -->
+    <section id="tab-system" class="tab-pane">
+      <div class="section-header">
+        <div>
+          <h2 class="section-title">Kiến Trúc Hệ Thống & Cổng Dịch Vụ Giám Sát</h2>
+          <p class="section-sub">Đề số 6: Tích hợp Docker Compose, Nginx, PostgreSQL, pgAdmin, Prometheus, Grafana & Loki</p>
+        </div>
+      </div>
+
+      <div class="system-cards-grid">
+        <div class="sys-card">
+          <div class="sys-icon">🌐</div>
+          <h3>Nginx Reverse Proxy</h3>
+          <p>Cổng tiếp nhận duy nhất, tự ký chứng chỉ HTTPS, Rate limiting, chặn tấn công và gán Security Headers.</p>
+          <div class="sys-tags">
+            <span class="tag">Port 80 (HTTP)</span>
+            <span class="tag">Port 443 (HTTPS)</span>
+            <span class="tag">SSL/TLS</span>
+          </div>
+          <a href="https://localhost" target="_blank" class="btn btn-outline">Kiểm Tra HTTPS (443)</a>
+        </div>
+
+        <div class="sys-card">
+          <div class="sys-icon">🐘</div>
+          <h3>PostgreSQL & pgAdmin</h3>
+          <p>Cơ sở dữ liệu quan hệ lưu trữ dữ liệu phòng, khách hàng, đơn đặt với nguyên tắc Least Privilege (hotel_user).</p>
+          <div class="sys-tags">
+            <span class="tag">PostgreSQL 16</span>
+            <span class="tag">Internal: 5432</span>
+            <span class="tag">pgAdmin: 5050</span>
+          </div>
+          <a href="/pgadmin/" target="_blank" class="btn btn-outline">Mở pgAdmin 4</a>
+        </div>
+
+        <div class="sys-card">
+          <div class="sys-icon">🔥</div>
+          <h3>Prometheus Giám Sát</h3>
+          <p>Thu thập số liệu thời gian thực từ Node.js App, Nginx Exporter, Postgres Exporter, cAdvisor và Node Exporter.</p>
+          <div class="sys-tags">
+            <span class="tag">Port 9090</span>
+            <span class="tag">Metrics Exporters</span>
+            <span class="tag">cAdvisor 8080</span>
+          </div>
+          <a href="http://localhost:9090" target="_blank" class="btn btn-outline">Mở Prometheus UI</a>
+        </div>
+
+        <div class="sys-card">
+          <div class="sys-icon">📊</div>
+          <h3>Grafana Dashboards</h3>
+          <p>Bảng điều khiển trực quan hóa metrics hệ thống, ứng dụng, container và cơ sở dữ liệu thời gian thực.</p>
+          <div class="sys-tags">
+            <span class="tag">Port 3001</span>
+            <span class="tag">Auto-Provisioning</span>
+            <span class="tag">3 Dashboards</span>
+          </div>
+          <a href="http://localhost:3001" target="_blank" class="btn btn-outline">Mở Grafana (3001)</a>
+        </div>
+
+        <div class="sys-card">
+          <div class="sys-icon">📜</div>
+          <h3>Loki & Promtail (LogQL)</h3>
+          <p>Hệ thống gom log tập trung từ Nginx và Web App. Truy vấn nhanh chóng các sự kiện nghiệp vụ và mã lỗi HTTP.</p>
+          <div class="sys-tags">
+            <span class="tag">Port 3100</span>
+            <span class="tag">Promtail Agent</span>
+            <span class="tag">LogQL Queries</span>
+          </div>
+          <button onclick="switchTab('system'); alert('Dùng Grafana Explore (port 3001) chọn datasource Loki để chạy câu truy vấn LogQL!')" class="btn btn-outline">Hướng Dẫn LogQL</button>
+        </div>
+
+        <div class="sys-card">
+          <div class="sys-icon">🛡️</div>
+          <h3>Hardening & Bảo Mật</h3>
+          <p>Áp dụng Non-root user trong container, cô lập mạng (3 networks riêng biệt), mật khẩu mạnh, chặn quyền DB.</p>
+          <div class="sys-tags">
+            <span class="tag">Non-root User</span>
+            <span class="tag">3 Docker Networks</span>
+            <span class="tag">Least Privilege</span>
+          </div>
+          <a href="/metrics" target="_blank" class="btn btn-outline">Xem /metrics Raw</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL ĐẶT PHÒNG (BOOKING MODAL) -->
+  <div id="booking-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" id="modal-room-title">Đặt Phòng Khách Sạn</h3>
+          <span class="modal-sub" id="modal-room-price">-- VNĐ / đêm</span>
+        </div>
+        <button class="close-btn" onclick="closeBookingModal()">✕</button>
+      </div>
+
+      <form id="booking-form" onsubmit="handleBookingSubmit(event)">
+        <input type="hidden" id="book-room-id">
+        <input type="hidden" id="book-room-rate">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Ngày Nhận Phòng <span class="req">*</span></label>
+            <input type="date" id="book-checkin" required onchange="calculateBookingTotal()">
+          </div>
+          <div class="form-group">
+            <label>Ngày Trả Phòng <span class="req">*</span></label>
+            <input type="date" id="book-checkout" required onchange="calculateBookingTotal()">
+          </div>
+          <div class="form-group">
+            <label>Họ Và Tên Quý Khách <span class="req">*</span></label>
+            <input type="text" id="book-name" placeholder="Ví dụ: Trần Văn Nam" required>
+          </div>
+          <div class="form-group">
+            <label>Số Điện Thoại <span class="req">*</span></label>
+            <input type="tel" id="book-phone" placeholder="Ví dụ: 0912345678" required>
+          </div>
+          <div class="form-group">
+            <label>Email Xác Nhận <span class="req">*</span></label>
+            <input type="email" id="book-email" placeholder="Ví dụ: nam.tran@example.com" required>
+          </div>
+          <div class="form-group">
+            <label>Số CCCD / Hộ Chiếu <span class="req">*</span></label>
+            <input type="text" id="book-idcard" placeholder="Ví dụ: 001201009988" required>
+          </div>
+          <div class="form-group full-width">
+            <label>Địa Chỉ Khách Hàng</label>
+            <input type="text" id="book-address" placeholder="Ví dụ: Số 25 Hàng Bài, Hoàn Kiếm, Hà Nội">
+          </div>
+          <div class="form-group full-width">
+            <label>Yêu Cầu Đặc Biệt (Nếu có)</label>
+            <textarea id="book-requests" rows="2" placeholder="Ví dụ: Tầng cao, giường không ghép, đón sân bay..."></textarea>
+          </div>
+        </div>
+
+        <div class="calc-box">
+          <div class="calc-row">
+            <span>Thời gian lưu trú:</span>
+            <strong id="calc-nights">0 đêm</strong>
+          </div>
+          <div class="calc-row total-row">
+            <span>Tổng thanh toán dự kiến:</span>
+            <strong class="total-price" id="calc-total">0 VNĐ</strong>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" onclick="closeBookingModal()">Đóng</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-booking">
+            <span>🔒 Xác Nhận Đặt Phòng</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL XEM CHI TIẾT PHÒNG -->
+  <div id="room-detail-modal" class="modal-backdrop">
+    <div class="modal-card detail-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="detail-title">Chi Tiết Phòng</h3>
+        <button class="close-btn" onclick="closeDetailModal()">✕</button>
+      </div>
+      <div class="detail-body" id="detail-body">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-col">
+        <h4>GRAND PALACE LUXURY HOTEL</h4>
+        <p>Đồ án môn học: Triển khai và Quản trị Hệ thống Phần mềm</p>
+        <p>Đề tài số 6: Hệ thống Đặt phòng Khách sạn</p>
+      </div>
+      <div class="footer-col">
+        <h4>CÔNG NGHỆ ÁP DỤNG</h4>
+        <p>• Container: Docker & Docker Compose</p>
+        <p>• Web & App: Node.js, Express, Nginx (SSL/TLS)</p>
+        <p>• Database: PostgreSQL 16 & pgAdmin 4</p>
+        <p>• Monitoring: Prometheus, Grafana, Loki, Promtail, cAdvisor</p>
+      </div>
+      <div class="footer-col">
+        <h4>BẢO MẬT & HARDENING</h4>
+        <p>• 3 Isolated Networks (Frontend, Backend, Monitoring)</p>
+        <p>• Least Privilege DB User (hotel_user)</p>
+        <p>• Non-root User Container (UID 10001)</p>
+        <p>• Nginx Security Headers & SSL Rate Limiting</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 Grand Palace Luxury Hotel System - Triển khai hoàn chỉnh trên Docker Compose</p>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

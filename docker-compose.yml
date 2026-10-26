@@ -1,0 +1,344 @@
+# ==========================================================
+# ĐỀ SỐ 6: HỆ THỐNG ĐẶT PHÒNG KHÁCH SẠN (HOTEL BOOKING)
+# DOCKER COMPOSE HOÀN CHỈNH: CORE, MONITORING, LOGGING & HARDENING
+# ==========================================================
+
+services:
+  # ==========================================
+  # 1. DATABASE TIER: POSTGRESQL 16 (CÔ LẬP MẠNG BACKEND)
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: hotel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hotel_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-HotelRoot_SecPass2026!#}
+    volumes:
+      - hotel_postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - hotel_backend
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-hotel_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # 2. APPLICATION TIER: NODE.JS (NON-ROOT USER)
+  # ==========================================
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: hotel-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: ${APP_PORT:-3000}
+      NODE_ENV: ${NODE_ENV:-production}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-hotel_db}
+      DB_USER: ${DB_USER:-hotel_user}
+      DB_PASSWORD: ${DB_PASSWORD:-HotelApp_SecPass2026!#}
+      LOG_DIR: /app/logs
+    volumes:
+      - hotel_app_logs:/app/logs
+    networks:
+      - hotel_frontend
+      - hotel_backend
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ==========================================
+  # 3. DATABASE MANAGEMENT: PGADMIN 4
+  # ==========================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hotel-pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@hotel.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-PgAdmin_SecPass2026!#}
+      PGADMIN_LISTEN_PORT: 8080
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_UPGRADE_CHECK_ENABLED: 'False'
+      PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: 'False'
+    volumes:
+      - hotel_pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - hotel_backend
+      - hotel_frontend
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 384M
+
+  # ==========================================
+  # 4. REVERSE PROXY TIER: NGINX (HTTPS & SECURITY HEADERS)
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    container_name: hotel-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+      - pgadmin
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - hotel_nginx_logs:/var/log/nginx
+    networks:
+      - hotel_frontend
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # ==========================================
+  # 5. METRICS EXPORTERS: POSTGRES & NGINX
+  # ==========================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: hotel-postgres-exporter
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-HotelRoot_SecPass2026!#}@postgres:5432/${POSTGRES_DB:-hotel_db}?sslmode=disable"
+    networks:
+      - hotel_backend
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    container_name: hotel-nginx-exporter
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    command:
+      - -nginx.scrape-uri=http://nginx:80/nginx_status
+    networks:
+      - hotel_frontend
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ==========================================
+  # 6. CONTAINER & HOST METRICS: CADVISOR & NODE-EXPORTER
+  # ==========================================
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: hotel-cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - hotel_monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: hotel-node-exporter
+    restart: unless-stopped
+    networks:
+      - hotel_monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ==========================================
+  # 7. METRICS STORAGE: PROMETHEUS
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: hotel-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - hotel_prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+
+  # ==========================================
+  # 8. LOGGING TIER: LOKI & PROMTAIL (LOGQL)
+  # ==========================================
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: hotel-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - hotel_loki_data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    networks:
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: hotel-promtail
+    restart: unless-stopped
+    depends_on:
+      - loki
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - hotel_nginx_logs:/var/log/nginx:ro
+      - hotel_app_logs:/app/logs:ro
+    networks:
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ==========================================
+  # 9. DASHBOARDS & VISUALIZATION: GRAFANA
+  # ==========================================
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: hotel-grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-Grafana_SecPass2026!#}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    volumes:
+      - hotel_grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    networks:
+      - hotel_monitoring
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+
+# ==========================================
+# CÔ LẬP MẠNG ĐA TẦNG (NETWORK ISOLATION)
+# ==========================================
+networks:
+  hotel_frontend:
+    name: hotel_frontend_net
+    driver: bridge
+  hotel_backend:
+    name: hotel_backend_net
+    driver: bridge
+  hotel_monitoring:
+    name: hotel_monitoring_net
+    driver: bridge
+
+# ==========================================
+# CÁC VOLUME DỮ LIỆU ĐỘC LẬP
+# ==========================================
+volumes:
+  hotel_postgres_data:
+    name: hotel_postgres_data
+  hotel_pgadmin_data:
+    name: hotel_pgadmin_data
+  hotel_app_logs:
+    name: hotel_app_logs
+  hotel_nginx_logs:
+    name: hotel_nginx_logs
+  hotel_prometheus_data:
+    name: hotel_prometheus_data
+  hotel_grafana_data:
+    name: hotel_grafana_data
+  hotel_loki_data:
+    name: hotel_loki_data
